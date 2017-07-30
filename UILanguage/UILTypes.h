@@ -19,19 +19,22 @@ namespace UIL
 	typedef BYTE				BOOL;
 	typedef UBYTE				UBOOL;
 
-	typedef int16_t				SHORT;
-	typedef uint16_t			USHORT;
+	typedef int16_t				INT16;
+	typedef uint16_t			UINT16;
 
-	typedef int32_t				INT;
-	typedef uint32_t			UINT;
+	typedef int32_t				INT32;
+	typedef uint32_t			UINT32;
 
 	typedef int64_t				INT64;
 	typedef uint64_t			UINT64;
 
-	typedef uint32_t			DWORD;
-	typedef uint64_t			QWORD;
+	typedef INT32				INT;
+	typedef UINT32				UINT;
 
 	typedef char				CHAR;
+	typedef unsigned char		UCHAR;
+	typedef signed char			SCHAR;
+
 	typedef wchar_t				WCHAR;
 
 #if UIL_USE_UTF_16
@@ -40,16 +43,23 @@ namespace UIL
 	typedef CHAR				TCHAR;
 #endif
 
-	/* Decimal Types */
+	/* Fractional Types */
 	typedef float				FLOAT;
 	typedef double				DOUBLE;
+
+	/* String Types */
+	typedef TCHAR*				CSTRING;
+
+	/* Misc Types */
+	typedef UBYTE				BITFIELD;
+	typedef UINT64				ISIZE;
 }
 
+#if _MSC_VER
+#define FORCEINLINE		__forceinline
+#else
 #define FORCEINLINE		inline
-
-#define BITFIELD(NAME)	UIL::UBYTE NAME:1
-#define NIBBLE(NAME)	UIL::UBYTE NAME:4
-
+#endif
 
 /* Predefined Values */
 #define FALSE			0

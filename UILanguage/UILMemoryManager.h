@@ -11,56 +11,151 @@ namespace UIL
 	class IMemoryManager
 	{
 	public:
-		template<typename TYPE>
-		virtual TYPE* New(UINT nCount) = 0;
+		virtual void*	Alloc(ISIZE nByteSize) = 0;
+		virtual void*	AllocZeroed(ISIZE nCount, ISIZE nSizePer) = 0;
+		virtual void	Free(void* pVal) = 0;
+		virtual void*	Renew(void* pVal, ISIZE nSize) = 0;
 
-		template<typename TYPE>
-		virtual void Delete(TYPE* pVal) = 0;
-
-		template<typename TYPE>
-		virtual TYPE* Renew(UINT nCount) = 0;
-
-		template<typename TYPE>
-		virtual void* Reserve(UINT nCount) = 0;
-		virtual void* Reserve(UINT nByteSize) = 0;
-
-		template<typename TYPE>
-		virtual void Copy(TYPE* pDest, const TYPE* const pSource, UINT nCount) = 0;
-		virtual void Copy(void* pDest, const void* const pSource, UINT nByteSize) = 0;
-	};
-
-	class BasicMemoryManager : public IMemoryManager
-	{
 	public:
-		template<typename TYPE>
-		TYPE* New(UINT nCount = 1) { CHECK(nCount > 0); return new TYPE[nCount]; }
-
-		template<typename TYPE>
-		void Delete(TYPE*& pVal) { CHECK(pVal != NULL); delete pVal; pVal = NULL; };
-
-		template<typename TYPE>
-		TYPE* Renew(TYPE*& pVal, UINT nCount = 1)
+		template<typename TYPE, typename ... ARGTYPES>
+		TYPE* New(ARGTYPES ... args)
 		{
-			CHECK(pVal != NULL);
-			TYPE* renewed = New<TYPE>(nCount);
-			Copy<TYPE>(renewed, pVal, nCount);
-			Delete(pVal);
-			pVal = renewed;
+			TYPE* self = static_cast<TYPE*>(Alloc(sizeof(TYPE) * nCount));
+			Construct<TYPE>(self, args);
+			return self;
 		}
 
-
 		template<typename TYPE>
-		void Copy(TYPE* pDest, const TYPE* const pSource, UINT nCount)
+		TYPE* NewArray(ISIZE nCount)
 		{
-			Copy(pDest, pSource, nCount * sizeof(TYPE));
+			CHECK(nCount > 0);
+			void* pData = Alloc(sizeof(TYPE) * nCount + sizeof(UINT)); // Will always allocate a little more to keep count available
+			TYPE* pArr = static_cast<TYPE*>((void*)((UCHAR*)pData + sizeof(UINT)));
+			*((UINT*)pData) = nCount;
+			for (UINT i = 0; i < nCount; ++i)
+			{
+				Construct<TYPE>( &pArr[i] ); // call default constructor
+			}
+			return pArr;
 		}
 
-		FORCEINLINE void Copy(void* pDest, const void* const pSource, UINT nByteSize)
+		template<typename TYPE>
+		void Delete(TYPE* pVal)
 		{
-			CHECK(pDest != NULL && pSource != NULL);
+			CHECK(pVal != nullptr);
+			Destruct<TYPE>(pVal);
+			Free(pVal);
+		}
+
+		template<typename TYPE>
+		void DeleteArray(TYPE* pVal)
+		{
+			CHECK(pVal != nullptr);
+			void* pStart = static_cast<UCHAR*>((void*)pVal) - sizeof(UINT); // Always puts a count before an array
+			UINT count = *((UINT*)pStart);
+			CHECK(count > 0);
+
+			for (UINT i = 0; i < count; ++i)
+			{
+				Destruct<TYPE>(&pVal[i]);
+			}
+			Free(pStart);
+		}
+
+		template<typename TYPE, typename ... ARGTYPES>
+		FORCEINLINE void Construct(TYPE* pObject,ARGTYPES ... args)
+		{
+			CHECK(pObject != nullptr);
+			new(pObject) TYPE(args...);
+		}
+
+		/************************************************
+		void Destruct(TYPE* pObject)
+			Will call the destructor on an object
+			WARNING: Only call on objects created with {@code Alloc} and manually constructed previously
+				Otherwise you may end up double destructing something
+		*************************************************/
+		template<typename TYPE>
+		FORCEINLINE void Destruct(TYPE* pObject)
+		{
+			CHECK(pObject != nullptr);
+			pObject->~TYPE();
+		}
+
+		template<typename TYPE>
+		FORCEINLINE void Copy(TYPE* pDest, const TYPE* const pSource)
+		{
+			Copy(static_cast<void*>(pDest), static_cast<void*>(pSource), sizeof(TYPE));
+		}
+		template<typename TYPE>
+		FORCEINLINE void Copy(TYPE* pDest, const TYPE* const pSource, ISIZE nCount)
+		{
+			Copy(static_cast<void*>(pDest), static_cast<void*>(pSource), sizeof(TYPE) * nCount);
+		}
+		FORCEINLINE void Copy(void* pDest, const void* const pSource, ISIZE nByteSize)
+		{
+			CHECK(nByteSize > 0);
+			CHECK(pDest != nullptr);
+			CHECK(pSource != nullptr);
 			memcpy(pDest, pSource, nByteSize);
 		}
 	};
+
+	// An example memory manager layout
+	class BasicMemoryManager : public IMemoryManager
+	{
+	public:
+		void* Alloc(ISIZE nByteSize) final
+		{
+			CHECK(nByteSize > 0);
+			return malloc((size_t)nByteSize);
+		}
+
+		void* AllocZeroed(ISIZE nCount, ISIZE nSizePer) final
+		{
+			CHECK(nCount > 0);
+			CHECK(nSizePer > 0);
+			return calloc(nCount, nSizePer);
+		}
+
+		void Free(void* pVal) final
+		{
+			CHECK(pVal != nullptr);
+			free(pVal);
+		}
+
+		void* Renew(void* pVal, ISIZE nSize) final
+		{
+			return realloc(pVal, (size_t)nSize);
+		}
+	};
+}
+
+// Use placement-new for memory manager profiles
+void* operator new(size_t nSize, UIL::IMemoryManager* pManager)
+{
+	CHECK(pManager != nullptr);
+	return pManager->Alloc(nSize);
+}
+void* operator new[](size_t nSize, UIL::IMemoryManager* pManager)
+{
+	CHECK(pManager != nullptr);
+	return pManager->Alloc(nSize);
+}
+
+void operator delete(void* pVal, UIL::IMemoryManager* pManager)
+{
+	if (pVal != nullptr)
+	{
+		pManager->Free(pVal);
+	}
+}
+void operator delete[](void* pVal, UIL::IMemoryManager* pManager)
+{
+	if (pVal != nullptr)
+	{
+		pManager->Free(pVal);
+	}
 }
 
 #endif

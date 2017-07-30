@@ -2,10 +2,18 @@
 #define _UIL_DEBUG_FUNCTIONS_HEADER_
 
 #if _DEBUG || DEBUG
+#include <exception>
+#include <iostream>
 #include <stdio.h>
 
-#define ERROR(TEXT) throw TEXT
-#define CHECK(STATEMENT) if(!(STATEMENT)) ERROR("Assertion failed check "#STATEMENT)
+class CheckFail : public std::exception
+{
+public:
+	CheckFail(const char* str): std::exception(str) {}
+	operator const char*() { return what(); }
+};
+
+#define CHECK(STATEMENT) if( !( STATEMENT ) ) throw CheckFail("Assertion failed check " #STATEMENT )
 
 #elif COMPILER_SUPPORTS_NOOP
 
