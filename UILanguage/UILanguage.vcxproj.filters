@@ -15,17 +15,28 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="UILTypes.h">
+    <ClInclude Include="Base\Includes\UILArray.h">
       <Filter>Base\Includes</Filter>
     </ClInclude>
-    <ClInclude Include="UILArray.h">
+    <ClInclude Include="Base\Includes\UILDebug.h">
       <Filter>Base\Includes</Filter>
     </ClInclude>
-    <ClInclude Include="UILMemoryManager.h">
+    <ClInclude Include="Base\Includes\UILMemoryManager.h">
       <Filter>Base\Includes</Filter>
     </ClInclude>
-    <ClInclude Include="UILDebug.h">
+    <ClInclude Include="Base\Includes\UILTypes.h">
       <Filter>Base\Includes</Filter>
     </ClInclude>
+    <ClInclude Include="Base\Includes\UILMemory.h">
+      <Filter>Base\Includes</Filter>
+    </ClInclude>
+    <ClInclude Include="Base\Includes\UILManagedMemory.h" />
+    <ClInclude Include="Base\Includes\UILIterator.h" />
+    <ClInclude Include="Base\Includes\UILRecurringTemplate.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Base\Src\UILMemoryManager.cpp">
+      <Filter>Base\Src</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
